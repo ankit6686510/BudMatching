@@ -119,8 +119,6 @@ VITE_API_URL=http://localhost:5000
 ### Authentication
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
-- `GET /api/auth/google` - Google OAuth login
-- `GET /api/auth/google/callback` - Google OAuth callback
 - `POST /api/auth/logout` - Logout user
 - `POST /api/auth/forgot-password` - Request password reset
 - `POST /api/auth/reset-password` - Reset password

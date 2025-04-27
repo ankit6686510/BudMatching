@@ -4,10 +4,18 @@ import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import User from '../models/User.js';  // Import actual User model
 import dotenv from 'dotenv';
 
+// Load environment variables
+dotenv.config();
+
+// Ensure JWT_SECRET is set
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET is not set in environment variables');
+  process.exit(1);
+}
 
 const options = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.JWT_SECRET
+  secretOrKey: process.env.JWT_SECRET || 'budmatching_jwt_secret_key_2024' // Fallback for development
 };
 
 // JWT Strategy for authentication
@@ -32,7 +40,7 @@ export const authenticateJWT = passport.authenticate('jwt', { session: false });
 export const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, email: user.email },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECRET || 'budmatching_jwt_secret_key_2024',
     { expiresIn: '7d' }
   );
 };
@@ -46,7 +54,7 @@ export const verifyToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'budmatching_jwt_secret_key_2024');
     req.user = decoded;
     next();
   } catch (error) {

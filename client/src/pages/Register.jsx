@@ -12,13 +12,11 @@ import {
   Grid,
   Link,
   CircularProgress,
-  Divider,
   Alert,
 } from '@mui/material';
-import GoogleIcon from '@mui/icons-material/Google';
 
 import { loginStart, login, loginFailure } from '../store/slices/authSlice';
-import { register, googleLogin } from '../services/authService';
+import { register } from '../services/authService';
 
 const validationSchema = Yup.object({
   name: Yup.string().required('Name is required'),
@@ -57,19 +55,6 @@ const Register = () => {
       setSubmitting(false);
     }
   };
-  
-  const handleGoogleLogin = async () => {
-    setRegisterError(null);
-    try {
-      dispatch(loginStart());
-      const data = await googleLogin();
-      dispatch(login(data));
-      navigate(from, { replace: true });
-    } catch (err) {
-      setRegisterError(err.message || 'Google login failed');
-      dispatch(loginFailure(err.message || 'Google login failed'));
-    }
-  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -96,12 +81,12 @@ const Register = () => {
         )}
 
         <Formik
-          initialValues={{ 
-            name: '', 
-            email: '', 
-            password: '', 
-            confirmPassword: '', 
-            location: '' 
+          initialValues={{
+            name: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            location: ''
           }}
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
@@ -188,21 +173,6 @@ const Register = () => {
             </Form>
           )}
         </Formik>
-
-        <Divider sx={{ my: 3, width: '100%' }}>OR</Divider>
-
-        <Button
-          fullWidth
-          variant="outlined"
-          color="primary"
-          size="large"
-          startIcon={<GoogleIcon />}
-          sx={{ mb: 3 }}
-          onClick={handleGoogleLogin}
-          disabled={loading}
-        >
-          Continue with Google
-        </Button>
 
         <Grid container justifyContent="center">
           <Grid item>

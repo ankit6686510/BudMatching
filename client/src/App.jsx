@@ -15,7 +15,6 @@ import Listings from './pages/Listings';
 import Messages from './pages/Messages';
 import NotFound from './pages/NotFound';
 import PasswordReset from './pages/PasswordReset';
-import OauthCallback from './pages/OauthCallback';
 import { checkAuth } from './services/authService';
 import { login, logout } from './store/slices/authSlice';
 import theme from './theme';
@@ -99,7 +98,6 @@ const App = () => {
             <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
             <Route path="/forgot-password" element={<PasswordReset />} />
             <Route path="/reset-password/:token" element={<PasswordReset />} />
-            <Route path="/oauth-callback" element={<OauthCallback />} />
             
             {/* Listings routes */}
             <Route path="/listings" element={<Listings />} />

@@ -1,11 +1,11 @@
 import { Server } from 'socket.io';
-import Message from './models/Message.js';
-import Chat from './models/Chat.js';
+import Message from './src/models/Message.js';
+import Chat from './src/models/Chat.js';
 
 export const initializeSocket = (httpServer) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: '*', // Allow all origins temporarily for testing
+      origin: process.env.CLIENT_URL || 'http://localhost:5173',
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       credentials: true,
       allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']

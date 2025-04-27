@@ -6,24 +6,30 @@ import { createServer } from 'http';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import session from 'express-session';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import path from 'path';
+import rateLimit from 'express-rate-limit';
+import winston from 'winston';
+
+// Load environment variables
+dotenv.config();
 
 // Import models
-import User from './models/User.js';
-import Listing from './models/Listing.js';
-import Message from './models/Message.js';
-import Chat from './models/Chat.js';
+import User from './src/models/User.js';
+import Message from './src/models/Message.js';
+import EarbudListing from './src/models/EarbudListing.js';
+import Chat from './src/models/Chat.js';
 
 // Import socket.io initialization
 import { initializeSocket } from './socket.js';
 
-// Load environment variables
-dotenv.config();
+// Import routes
+import userRoutes from './src/routes/userRoutes.js';
+import earbudListingRoutes from './src/routes/earbudListingRoutes.js';
+import messageRoutes from './src/routes/messageRoutes.js';
 
 // Initialize Express app
 const app = express();
@@ -52,11 +58,22 @@ const upload = multer({
 
 // Middleware
 app.use(cors({
-  origin: '*', // Allow all origins temporarily for testing
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
 }));
+
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Content-Security-Policy', "default-src 'self'");
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -75,16 +92,61 @@ app.use(passport.session());
 // Make io accessible to the routes
 app.set('io', io);
 
-// Connect to MongoDB
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
-    console.log('Please check your MongoDB connection string in .env file');
-  });
+// Configure logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' })
+  ]
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple()
+  }));
+}
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later'
+});
+
+app.use(limiter);
+
+// Connect to MongoDB with retry logic
+const connectWithRetry = async () => {
+  const maxRetries = 5;
+  let retries = 0;
+  
+  while (retries < maxRetries) {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 5000
+      });
+      logger.info('Connected to MongoDB');
+      return;
+    } catch (error) {
+      retries++;
+      logger.error(`MongoDB connection attempt ${retries} failed:`, error);
+      if (retries === maxRetries) {
+        logger.error('Max retries reached. Could not connect to MongoDB');
+        process.exit(1);
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+};
+
+connectWithRetry();
 
 // Configure JWT strategy
 const jwtOptions = {
@@ -104,78 +166,6 @@ passport.use(
       return done(error, false);
     }
   })
-);
-
-// Configure Google OAuth strategy
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: '/api/auth/google/callback',
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        if (!profile.emails || !profile.emails.length) {
-          return done(new Error('No email found in Google profile'), null);
-        }
-
-        const email = profile.emails[0].value;
-        const name = profile.displayName;
-        const googleId = profile.id;
-        const avatar = profile.photos && profile.photos.length ? profile.photos[0].value : null;
-        
-        // Try to find user by Google ID first
-        let user = await User.findOne({ googleId });
-        
-        if (user) {
-          // User found by Google ID - update if needed
-          if (user.name !== name || (avatar && user.avatar !== avatar)) {
-            user = await User.findByIdAndUpdate(
-              user._id,
-              { 
-                name, 
-                avatar: avatar || user.avatar 
-              },
-              { new: true }
-            );
-          }
-          return done(null, user);
-        }
-        
-        // No user with this Google ID, try to find by email
-        user = await User.findOne({ email });
-        
-        if (user) {
-          // User found by email - update with Google info
-          user = await User.findByIdAndUpdate(
-            user._id,
-            { 
-              googleId,
-              avatar: avatar || user.avatar,
-              name: user.name || name
-            },
-            { new: true }
-          );
-          return done(null, user);
-        }
-        
-        // No user found, create a new one
-        const newUser = new User({
-          name,
-          email,
-          googleId,
-          avatar: avatar || 'https://ui-avatars.com/api/?background=random'
-        });
-        
-        await newUser.save();
-        return done(null, newUser);
-      } catch (error) {
-        console.error('Google strategy error:', error);
-        return done(error, false);
-      }
-    }
-  )
 );
 
 // Passport serialization
@@ -228,31 +218,35 @@ app.get('/api/auth/verify', authCheck, async (req, res) => {
   }
 });
 
-// Authentication Routes
-app.post('/api/auth/register', async (req, res) => {
+// Input validation middleware
+const validateUserInput = (req, res, next) => {
+  const { name, email, password } = req.body;
+  
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: 'Invalid email format' });
+  }
+  
+  if (password.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters' });
+  }
+  
+  next();
+};
+
+// Update registration route to use validation
+app.post('/api/auth/register', validateUserInput, async (req, res) => {
   try {
     const { name, email, password, location } = req.body;
-    
-    // Check for missing required fields
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please provide name, email and password' });
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: 'Please provide a valid email address' });
-    }
     
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists with this email' });
-    }
-    
-    // Validate password
-    if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
     
     // Hash password
@@ -279,9 +273,10 @@ app.post('/api/auth/register', async (req, res) => {
     // Remove password from response
     const userResponse = savedUser.toJSON();
     
+    logger.info(`New user registered: ${email}`);
     res.status(201).json({ user: userResponse, token });
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', error);
     res.status(500).json({ message: 'Server error during registration' });
   }
 });
@@ -301,14 +296,6 @@ app.post('/api/auth/login', async (req, res) => {
     // If user doesn't exist
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
-    }
-    
-    // Check if this is a Google-only account (no password)
-    if (user.googleId && !user.password) {
-      return res.status(400).json({ 
-        message: 'This account was registered with Google. Please use Google Sign In.',
-        isGoogleAccount: true
-      });
     }
     
     // Check password
@@ -333,46 +320,6 @@ app.post('/api/auth/login', async (req, res) => {
     res.status(500).json({ message: 'Server error during login' });
   }
 });
-
-// Google OAuth route - handles initial authentication request
-app.get('/api/auth/google', passport.authenticate('google', { 
-  scope: ['profile', 'email'],
-  prompt: 'select_account', // Forces to prompt user to select an account
-  accessType: 'offline'     // Get refresh token
-}));
-
-// Google OAuth callback route - processes the authentication result
-app.get(
-  '/api/auth/google/callback',
-  passport.authenticate('google', { 
-    session: false,
-    failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=google_auth_failed` 
-  }),
-  (req, res) => {
-    try {
-      // Ensure we have a valid user
-      if (!req.user) {
-        console.error('No user found in request after Google authentication');
-        return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=auth_failed`);
-      }
-      
-      // Generate JWT
-      const token = jwt.sign(
-        { id: req.user._id },
-        process.env.JWT_SECRET || 'budmatching_jwt_secret',
-        { expiresIn: '7d' }
-      );
-      
-      // Redirect to frontend with token
-      const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/oauth-callback?token=${token}`;
-      
-      res.redirect(redirectUrl);
-    } catch (error) {
-      console.error('Google OAuth callback error:', error);
-      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=server_error`);
-    }
-  }
-);
 
 // User Routes
 app.get('/api/users/profile', authCheck, async (req, res) => {
@@ -459,7 +406,7 @@ app.get('/api/listings', async (req, res) => {
     if (side) query.side = side;
     if (condition) query.condition = condition;
     
-    const listings = await Listing.find(query)
+    const listings = await EarbudListing.find(query)
       .sort({ createdAt: -1 })
       .populate('seller', 'name avatar');
     
@@ -472,7 +419,7 @@ app.get('/api/listings', async (req, res) => {
 
 app.get('/api/listings/:id', async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.id)
+    const listing = await EarbudListing.findById(req.params.id)
       .populate('seller', 'name avatar location');
     
     if (!listing) {
@@ -495,7 +442,7 @@ app.post('/api/listings', authCheck, upload.array('images', 5), async (req, res)
     const imagePromises = req.files.map(file => handleCloudinaryUpload(file));
     const images = await Promise.all(imagePromises);
     
-    const newListing = new Listing({
+    const newListing = new EarbudListing({
       brand,
       model,
       side,
@@ -521,7 +468,7 @@ app.post('/api/listings', authCheck, upload.array('images', 5), async (req, res)
 
 app.put('/api/listings/:id', authCheck, async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.id);
+    const listing = await EarbudListing.findById(req.params.id);
     
     if (!listing) {
       return res.status(404).json({ message: 'Listing not found' });
@@ -534,7 +481,7 @@ app.put('/api/listings/:id', authCheck, async (req, res) => {
     
     const { brand, model, side, condition, price, description, location } = req.body;
     
-    const updatedListing = await Listing.findByIdAndUpdate(
+    const updatedListing = await EarbudListing.findByIdAndUpdate(
       req.params.id,
       { brand, model, side, condition, price, description, location },
       { new: true }
@@ -549,7 +496,7 @@ app.put('/api/listings/:id', authCheck, async (req, res) => {
 
 app.delete('/api/listings/:id', authCheck, async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.id);
+    const listing = await EarbudListing.findById(req.params.id);
     
     if (!listing) {
       return res.status(404).json({ message: 'Listing not found' });
@@ -560,7 +507,7 @@ app.delete('/api/listings/:id', authCheck, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
     
-    await Listing.findByIdAndDelete(req.params.id);
+    await EarbudListing.findByIdAndDelete(req.params.id);
     
     res.status(200).json({ message: 'Listing deleted successfully' });
   } catch (error) {
@@ -783,13 +730,82 @@ app.put('/api/messages/read/:chatId', authCheck, async (req, res) => {
   }
 });
 
+// Routes
+app.use('/api/users', userRoutes);
+app.use('/api/listings', earbudListingRoutes);
+app.use('/api/messages', messageRoutes);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  console.error('Error:', err);
+  res.status(500).json({
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
-// Start server
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-}); 
+// Environment variable validation
+const requiredEnvVars = [
+  'MONGODB_URI',
+  'JWT_SECRET',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET'
+];
+
+const validateEnvVars = () => {
+  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    logger.error('Missing required environment variables:', missingVars);
+    process.exit(1);
+  }
+  
+  // Validate MongoDB URI format
+  if (!process.env.MONGODB_URI.startsWith('mongodb://') && 
+      !process.env.MONGODB_URI.startsWith('mongodb+srv://')) {
+    logger.error('Invalid MongoDB URI format');
+    process.exit(1);
+  }
+  
+  // Validate JWT secret length
+  if (process.env.JWT_SECRET.length < 32) {
+    logger.error('JWT_SECRET must be at least 32 characters long');
+    process.exit(1);
+  }
+};
+
+// Validate environment variables before starting the server
+validateEnvVars();
+
+// Function to find an available port
+const findAvailablePort = async (startPort) => {
+  const net = await import('net');
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.unref();
+    server.on('error', () => {
+      resolve(findAvailablePort(startPort + 1));
+    });
+    server.listen(startPort, () => {
+      server.close(() => {
+        resolve(startPort);
+      });
+    });
+  });
+};
+
+// Start server with port fallback
+const startServer = async () => {
+  try {
+    const port = await findAvailablePort(parseInt(process.env.PORT) || 5000);
+    httpServer.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer(); 

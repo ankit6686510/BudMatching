@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
-  sender: {
+  chat: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Chat',
     required: true
   },
-  receiver: {
+  sender: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -16,12 +16,7 @@ const messageSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  listingId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'EarbudListing',
-    required: true
-  },
-  isRead: {
+  read: {
     type: Boolean,
     default: false
   },
@@ -34,8 +29,7 @@ const messageSchema = new mongoose.Schema({
 });
 
 // Index for efficient querying of messages
-messageSchema.index({ sender: 1, receiver: 1, listingId: 1 });
-messageSchema.index({ createdAt: -1 });
+messageSchema.index({ chat: 1, createdAt: -1 });
 
 const Message = mongoose.model('Message', messageSchema);
 

@@ -45,17 +45,7 @@ export const login = async (credentials) => {
     console.error('Login error:', error);
     
     if (error.response && error.response.data) {
-      const errorMessage = error.response.data.message || 'Login failed';
-      
-      // Check for Google account message
-      if (error.response.data.isGoogleAccount) {
-        throw { 
-          message: errorMessage,
-          isGoogleAccount: true
-        };
-      }
-      
-      throw { message: errorMessage };
+      throw { message: error.response.data.message || 'Login failed' };
     }
     
     throw { message: 'Login failed. Please check your connection and try again.' };
@@ -129,23 +119,6 @@ export const resetPassword = async (token, newPassword) => {
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Password reset failed' };
-  }
-};
-
-// Google OAuth login
-export const googleLogin = async () => {
-  try {
-    // Get the API base URL from the same place api.js does
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    console.log('Google login redirect URL:', `${API_BASE_URL}/api/auth/google`);
-    
-    // Redirect to the Google OAuth endpoint
-    window.location.href = `${API_BASE_URL}/api/auth/google`;
-    
-    // This function won't return anything as the browser will redirect
-    return new Promise(() => {});
-  } catch (error) {
-    throw error.response?.data || { message: 'Google login failed' };
   }
 };
 

@@ -12,14 +12,12 @@ import {
   Grid,
   Link,
   CircularProgress,
-  Divider,
   Alert,
   Snackbar,
 } from '@mui/material';
-import GoogleIcon from '@mui/icons-material/Google';
 
 import { loginStart, login, loginFailure } from '../store/slices/authSlice';
-import { login as loginService, googleLogin } from '../services/authService';
+import { login as loginService } from '../services/authService';
 
 const validationSchema = Yup.object({
   email: Yup.string().email('Enter a valid email').required('Email is required'),
@@ -31,33 +29,15 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { loading, error } = useSelector((state) => state.auth);
-  const [loginError, setLoginError] = useState(location.state?.authError || null);
-  const [isGoogleAccount, setIsGoogleAccount] = useState(false);
+  const [loginError, setLoginError] = useState(null);
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   
   // Get redirect path from location state or default to home
   const from = location.state?.from?.pathname || "/";
 
-  // Check URL for error parameters
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const errorParam = params.get('error');
-    
-    if (errorParam) {
-      if (errorParam === 'google_auth_failed') {
-        setLoginError('Google authentication failed. Please try again.');
-      } else if (errorParam === 'auth_failed') {
-        setLoginError('Authentication failed. Please try again.');
-      } else if (errorParam === 'server_error') {
-        setLoginError('Server error occurred. Please try again later.');
-      }
-    }
-  }, [location]);
-
   const handleSubmit = async (values, { setSubmitting }) => {
     setLoginError(null);
-    setIsGoogleAccount(false);
     
     try {
       dispatch(loginStart());
@@ -71,31 +51,10 @@ const Login = () => {
         navigate(from, { replace: true });
       }, 500);
     } catch (err) {
-      // Check if this is a Google account
-      if (err.isGoogleAccount) {
-        setIsGoogleAccount(true);
-        setLoginError(err.message);
-      } else {
-        setLoginError(err.message || 'Login failed');
-      }
+      setLoginError(err.message || 'Login failed');
       dispatch(loginFailure(err.message || 'Login failed'));
     } finally {
       setSubmitting(false);
-    }
-  };
-  
-  const handleGoogleLogin = () => {
-    setLoginError(null);
-    setIsGoogleAccount(false);
-    dispatch(loginStart());
-    
-    try {
-      // This will redirect to Google OAuth
-      googleLogin();
-      // No need to dispatch success here as the page will redirect
-    } catch (err) {
-      setLoginError(err.message || 'Google login failed');
-      dispatch(loginFailure(err.message || 'Google login failed'));
     }
   };
 
@@ -123,19 +82,8 @@ const Login = () => {
         
         {loginError && (
           <Alert 
-            severity={isGoogleAccount ? "info" : "error"} 
+            severity="error" 
             sx={{ width: '100%', mb: 2 }}
-            action={
-              isGoogleAccount && (
-                <Button 
-                  color="inherit" 
-                  size="small" 
-                  onClick={handleGoogleLogin}
-                >
-                  Google Login
-                </Button>
-              )
-            }
           >
             {loginError}
           </Alert>
@@ -190,26 +138,11 @@ const Login = () => {
                 disabled={loading || isSubmitting}
                 sx={{ mt: 2, mb: 2 }}
               >
-                {loading && !isGoogleAccount ? <CircularProgress size={24} /> : 'Login'}
+                {loading ? <CircularProgress size={24} /> : 'Login'}
               </Button>
             </Form>
           )}
         </Formik>
-
-        <Divider sx={{ my: 3, width: '100%' }}>OR</Divider>
-
-        <Button
-          fullWidth
-          variant="outlined"
-          color="primary"
-          size="large"
-          startIcon={<GoogleIcon />}
-          sx={{ mb: 3 }}
-          onClick={handleGoogleLogin}
-          disabled={loading && !isGoogleAccount}
-        >
-          Continue with Google
-        </Button>
 
         <Grid container justifyContent="center">
           <Grid item>
