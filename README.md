@@ -1,5 +1,6 @@
 # BudMatching - Platform for Finding Roommates & Accommodations
 
+
 BudMatching is a comprehensive platform designed to connect individuals looking for roommates or accommodations. This full-stack application allows users to create listings, search for properties, message potential roommates, and manage their profiles.
 
 ## Features
@@ -60,7 +61,7 @@ BudMatching is a comprehensive platform designed to connect individuals looking 
 - Node.js (v14.x or later)
 - MongoDB account
 - Cloudinary account
-- Google Developer account (for OAuth)
+- Google Developer account (for OAuth)-----
 
 ### Environment Variables
 
