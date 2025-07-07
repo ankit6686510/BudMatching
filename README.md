@@ -1,72 +1,84 @@
-# BudMatching - Platform for Finding Roommates & Accommodations
+# BudMatching – Find Your Lost Earbuds 🎧
 
+**BudMatching** is a full-stack platform designed to help users **find and match lost or found earbuds** using intelligent filtering, real-time chat, and user-friendly listings. Whether you’ve lost one bud or found someone else’s, BudMatching helps connect the right users to complete their pair.
 
-BudMatching is a comprehensive platform designed to connect individuals looking for roommates or accommodations. This full-stack application allows users to create listings, search for properties, message potential roommates, and manage their profiles.
+> 🚧 **Note**: This project is currently in development and not yet live.
 
-## Features
+---
 
-- **User Authentication**
-  - Email/Password registration and login
-  - Google OAuth integration
-  - JWT-based authentication
-  - Password reset functionality
+## 🧹 Features
 
-- **Listings Management**
-  - Create, read, update, and delete property listings
-  - Upload multiple images with Cloudinary integration
-  - Advanced filtering options (price, location, amenities)
-  - Add listings to favorites
+* **User Authentication**
 
-- **User Profiles**
-  - View and edit personal information
-  - Upload profile pictures
-  - View all user listings
-  - Manage favorite properties
+  * Register/login with email & password
+  * Google OAuth support
+  * Secure JWT-based authentication
+  * Password reset feature
 
-- **Real-time Messaging**
-  - Start conversations with property owners
-  - Real-time chat with Socket.io
-  - Typing indicators
-  - Message notifications
+* **Earbud Listings**
 
-- **Responsive Design**
-  - Mobile-friendly interface
-  - Material-UI components
-  - Intuitive user experience
+  * Create, view, update, and delete lost/found listings
+  * Upload images (via Cloudinary)
+  * Filter listings by brand, model, location, etc.
+  * Add earbuds to your watchlist/favorites
 
-## Tech Stack
+* **User Profiles**
+
+  * View and edit profile details
+  * Upload profile pictures
+  * View your posted listings
+  * Manage saved/favorite earbuds
+
+* **Real-time Chat**
+
+  * Start conversations with users who posted listings
+  * Chat live using **Socket.io**
+  * Typing indicators and notifications
+
+* **Responsive Design**
+
+  * Mobile-first UI
+  * Built with Material-UI
+  * Clean and intuitive user interface
+
+---
+
+## 💻 Tech Stack
 
 ### Frontend
-- React.js
-- Redux Toolkit (state management)
-- Material-UI (component library)
-- Formik & Yup (form validation)
-- Socket.io-client (real-time communication)
-- Axios (API requests)
+
+* React.js
+* Redux Toolkit
+* Material-UI
+* Formik & Yup
+* Axios
+* Socket.io-client
 
 ### Backend
-- Node.js
-- Express.js
-- MongoDB (database)
-- Mongoose (ODM)
-- Passport.js (authentication)
-- JWT (JSON Web Tokens)
-- Socket.io (real-time communication)
-- Cloudinary (image storage)
-- Multer (file uploads)
 
-## Installation & Setup
+* Node.js
+* Express.js
+* MongoDB + Mongoose
+* JWT + Passport.js
+* Multer & Cloudinary
+* Socket.io
 
-### Prerequisites
-- Node.js (v14.x or later)
-- MongoDB account
-- Cloudinary account
-- Google Developer account (for OAuth)-----
+---
 
-### Environment Variables
+## ⚙️ Installation & Setup
 
-#### Server (.env)
-```
+### Requirements
+
+* Node.js
+* MongoDB (local or Atlas)
+* Cloudinary account
+* Google Developer Console OAuth credentials
+
+### `.env` Configuration
+
+#### Backend (`server/.env`)
+
+```env
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
@@ -77,127 +89,138 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 CLIENT_URL=http://localhost:5173
 ```
 
-#### Client (.env)
-```
+#### Frontend (`client/.env`)
+
+```env
 VITE_API_URL=http://localhost:5000
 ```
 
-### Setup Instructions
+### 🚀 Getting Started
 
-1. **Clone the repository**
-   ```
-   git clone https://github.com/your-username/budmatching.git
-   cd budmatching
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/your-username/budmatching.git
+cd budmatching
 
-2. **Install dependencies**
-   ```
-   # Install server dependencies
-   cd server
-   npm install
+# Install server dependencies
+cd server
+npm install
 
-   # Install client dependencies
-   cd ../client
-   npm install
-   ```
+# Start the backend server
+npm run dev
 
-3. **Start the development servers**
-   ```
-   # Start the server (from the server directory)
-   npm run dev
+# In a new terminal, install frontend dependencies
+cd ../client
+npm install
 
-   # Start the client (from the client directory)
-   npm run dev
-   ```
+# Start the frontend app
+npm run dev
+```
 
-4. **Access the application**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:5000
+### Access the App
 
-## API Endpoints
+* Frontend: [http://localhost:5173](http://localhost:5173)
+* Backend API: [http://localhost:5000](http://localhost:5000)
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `POST /api/auth/logout` - Logout user
-- `POST /api/auth/forgot-password` - Request password reset
-- `POST /api/auth/reset-password` - Reset password
+---
 
-### Users
-- `GET /api/users/profile` - Get user profile
-- `PUT /api/users/profile` - Update user profile
-- `PUT /api/users/password` - Change password
-- `POST /api/users/profile/picture` - Upload profile picture
+## 📟 API Endpoints
 
-### Listings
-- `GET /api/listings` - Get all listings
-- `GET /api/listings/:id` - Get listing by ID
-- `POST /api/listings` - Create new listing
-- `PUT /api/listings/:id` - Update listing
-- `DELETE /api/listings/:id` - Delete listing
-- `GET /api/listings/user/:userId` - Get listings by user
-- `POST /api/listings/:id/favorite` - Add to favorites
-- `DELETE /api/listings/:id/favorite` - Remove from favorites
+### Auth Routes
 
-### Messages
-- `GET /api/messages/chats` - Get all user chats
-- `GET /api/messages/chat/:chatId` - Get messages by chat
-- `POST /api/messages` - Send new message
-- `POST /api/messages/chat` - Start new chat
-- `PUT /api/messages/read/:chatId` - Mark messages as read
+* `POST /api/auth/register`
+* `POST /api/auth/login`
+* `POST /api/auth/logout`
+* `POST /api/auth/forgot-password`
+* `POST /api/auth/reset-password`
 
-## Project Structure
+### User Routes
+
+* `GET /api/users/profile`
+* `PUT /api/users/profile`
+* `PUT /api/users/password`
+* `POST /api/users/profile/picture`
+
+### Earbud Listings
+
+* `GET /api/listings`
+* `GET /api/listings/:id`
+* `POST /api/listings`
+* `PUT /api/listings/:id`
+* `DELETE /api/listings/:id`
+* `GET /api/listings/user/:userId`
+* `POST /api/listings/:id/favorite`
+* `DELETE /api/listings/:id/favorite`
+
+### Messaging
+
+* `GET /api/messages/chats`
+* `GET /api/messages/chat/:chatId`
+* `POST /api/messages`
+* `POST /api/messages/chat`
+* `PUT /api/messages/read/:chatId`
+
+---
+
+## 📁 Project Structure
 
 ```
 budmatching/
-├── server/                   # Backend code
-│   ├── models/               # MongoDB schemas
-│   ├── routes/               # API routes
-│   ├── controllers/          # Request handlers
-│   ├── middleware/           # Auth middleware
-│   ├── utils/                # Helper functions
-│   ├── config/               # Configuration
-│   ├── .env                  # Environment variables
-│   ├── socket.js             # Socket.io setup
-│   └── server.js             # Entry point
-└── client/                   # Frontend code
+├── server/                   # Backend
+│   ├── controllers/
+│   ├── models/
+│   ├── routes/
+│   ├── middleware/
+│   ├── utils/
+│   ├── config/
+│   ├── socket.js
+│   └── server.js
+└── client/                   # Frontend
     ├── src/
-    │   ├── components/       # Reusable UI components
-    │   ├── pages/            # Page components
-    │   ├── services/         # API service functions
-    │   ├── store/            # Redux store
-    │   │   ├── slices/       # Redux slices
-    │   │   └── index.js      # Store configuration
-    │   ├── utils/            # Helper functions
-    │   ├── App.jsx           # Main component
-    │   └── main.jsx          # Entry point
-    ├── .env                  # Environment variables
-    ├── index.html            # HTML template
-    └── vite.config.js        # Vite configuration
+    │   ├── components/
+    │   ├── pages/
+    │   ├── services/
+    │   ├── store/
+    │   ├── utils/
+    │   ├── App.jsx
+    │   └── main.jsx
+    ├── index.html
+    └── vite.config.js
 ```
 
-## Screenshots
-- Login/Register: User authentication screens
-- Homepage: Listing overview with search and filters
-- Listing Details: Property information with images
-- Profile: User information and listings
-- Messages: Chat interface
+---
 
-## Future Enhancements
-- Location-based search with maps integration
-- Advanced matching algorithm for roommate compatibility
-- In-app payments for deposits
-- Listing verification system
-- Mobile application
+## 🧪 Screenshots
 
-## Troubleshooting
-- **Server won't start**: Check MongoDB connection and port availability
-- **Client build fails**: Verify all dependencies are installed
-- **Auth issues**: Check JWT_SECRET and Google OAuth credentials
-- **Image upload fails**: Verify Cloudinary credentials
+> *Screenshots will be added once the UI is completed.*
 
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+---
 
-## License
-This project is licensed under the MIT License. 
+## 🔮 Upcoming Features
+
+* Map-based location tagging for lost/found devices
+* AI-driven bud matching (e.g., by serial/model proximity)
+* Escrow-based deposit handling for high-value devices
+* Verified listing system
+* Progressive Web App (PWA) support
+
+---
+
+## 🛠 Troubleshooting
+
+* **Server won’t start** → Check MongoDB URI & `.env` setup
+* **Image uploads fail** → Double-check Cloudinary keys
+* **Auth errors** → Ensure JWT secret and OAuth configs are valid
+* **Real-time issues** → Verify Socket.io setup and client/server URLs
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome! Open issues if you find bugs or want to suggest features.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License**.
