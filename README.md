@@ -192,7 +192,8 @@ budmatching/
 
 ## 🧪 Screenshots
 
-> *Screenshots will be added once the UI is completed.*
+![Screenshot (539)](https://github.com/user-attachments/assets/047066c8-6d56-4ce4-938b-34633da9b177)
+
 
 ---
 
